@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Panel Baristas</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+    body {
+      min-height: 100vh;
+      background: linear-gradient(rgba(245,241,234,0.92), rgba(245,241,234,0.92)),
+        url('https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=1200&auto=format&fit=crop');
+      background-size: cover; background-position: center;
+      display: flex; align-items: center; justify-content: center; padding: 24px;
+    }
+    .card {
+      width: 100%; max-width: 420px;
+      background: rgba(255,255,255,0.92); backdrop-filter: blur(14px);
+      border: 1px solid rgba(255,255,255,0.7); border-radius: 28px;
+      padding: 38px 30px; box-shadow: 0 15px 50px rgba(0,0,0,0.12);
+    }
+    .logo { width: 140px; display: block; margin: 0 auto 18px; }
+    h2 { text-align: center; color: #2b2118; font-size: 19px; font-weight: 700; margin-bottom: 4px; }
+    .subtitle { text-align: center; color: #6f6258; font-size: 13px; margin-bottom: 22px; }
+    .field { margin-bottom: 13px; }
+    label { display: block; margin-bottom: 5px; color: #4a3f35; font-size: 13px; font-weight: 600; }
+    input[type=text], input[type=password], input[type=number] {
+      width: 100%; padding: 13px 15px; border-radius: 12px; border: 1px solid #ddd4ca;
+      background: #fff; font-size: 15px; color: #2b2118; transition: 0.2s;
+    }
+    input:focus { outline: none; border-color: #b38b59; box-shadow: 0 0 0 3px rgba(179,139,89,0.12); }
+    .btn { width: 100%; padding: 14px; border: none; border-radius: 12px; font-size: 15px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+    .btn-dark    { background: #2b2118; color: #fff; }
+    .btn-gold    { background: #b38b59; color: #fff; }
+    .btn-red     { background: #c0392b; color: #fff; }
+    .btn-outline { background: transparent; border: 2px solid #2b2118; color: #2b2118; }
+    .btn-scan    { background: #2b2118; color: #fff; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .btn:hover   { opacity: 0.88; transform: translateY(-1px); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+    .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
+    .screen { display: none; }
+    .screen.active { display: block; }
+    /* QR modal */
+    .qr-modal {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.85); z-index: 100;
+      align-items: center; justify-content: center; padding: 24px;
+    }
+    .qr-modal.active { display: flex; }
+    .qr-box {
+      background: #fff; border-radius: 20px; padding: 20px;
+      width: 100%; max-width: 360px; text-align: center;
+    }
+    .qr-box h3 { color: #2b2118; margin-bottom: 14px; font-size: 16px; }
+    #qr-wrap { position: relative; border-radius: 12px; overflow: hidden; background: #111; aspect-ratio: 1; margin-bottom: 14px; }
+    #qr-video { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .qr-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+    .qr-frame { width: 62%; aspect-ratio: 1; border: 3px solid #b38b59; border-radius: 10px; box-shadow: 0 0 0 9999px rgba(0,0,0,0.45); }
+    .qr-hint { font-size: 12px; color: #8c8177; margin-bottom: 12px; }
+    /* member card */
+    .member-card { background: #f9f5f0; border-radius: 14px; padding: 16px; margin: 16px 0; border: 1px solid #e8ddd3; }
+    .member-name  { font-size: 16px; font-weight: 700; color: #2b2118; margin-bottom: 8px; }
+    .member-pts   { font-size: 40px; font-weight: 700; color: #b38b59; line-height: 1; }
+    .member-label { font-size: 11px; color: #8c8177; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }
+    .divider { height: 1px; background: #e8ddd3; margin: 14px 0; }
+    /* mensajes */
+    .msg { font-size: 13px; padding: 10px 13px; border-radius: 9px; margin-top: 10px; display: none; text-align: center; }
+    .msg-ok  { background: #e8f5e9; color: #2e7d32; }
+    .msg-err { background: #fdecea; color: #c62828; }
+    .spinner { text-align: center; padding: 12px; color: #6f6258; font-size: 13px; display: none; }
+    .link-back { display: block; text-align: center; margin-top: 16px; color: #b38b59; font-size: 13px; font-weight: 600; cursor: pointer; text-decoration: underline; }
+    .tag { text-align: center; font-size: 11px; color: #8c8177; margin-bottom: 14px; }
+    @media(max-width:480px) { .card { padding: 28px 18px; border-radius: 20px; } }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <img class="logo" src="https://i.ibb.co/0pj9Vk9T/logo.png">
+
+  <!-- LOGIN -->
+  <div id="s-login" class="screen active">
+    <h2>Panel Baristas</h2>
+    <p class="subtitle">Acceso exclusivo para personal</p>
+    <div class="field">
+      <label>Usuario</label>
+      <input type="text" id="inp-usuario" placeholder="tu.usuario" autocomplete="username">
+    </div>
+    <div class="field">
+      <label>Contraseña</label>
+      <input type="password" id="inp-password" placeholder="••••••••"
+        onkeydown="if(event.key==='Enter') hacerLogin()">
+    </div>
+    <button class="btn btn-dark" onclick="hacerLogin()">Entrar</button>
+    <div class="spinner" id="sp-login">Verificando...</div>
+    <div class="msg msg-err" id="err-login"></div>
+  </div>
+
+  <!-- INICIO — buscar cliente -->
+  <div id="s-home" class="screen">
+    <h2>Registrar visita</h2>
+    <p class="tag" id="tag-home"></p>
+
+    <button class="btn btn-scan" onclick="abrirScanner()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h2v2h-2zM18 14h3M14 18v3M18 18h3v3"/></svg>
+      Escanear tarjeta
+    </button>
+
+    <div class="spinner" id="sp-home">Buscando cliente...</div>
+    <div class="msg msg-err" id="err-home"></div>
+  </div>
+
+  <!-- CLIENTE -->
+  <div id="s-member" class="screen">
+    <h2>Cliente</h2>
+    <p class="tag" id="tag-member"></p>
+
+    <div class="member-card">
+      <div class="member-label">Nombre</div>
+      <div class="member-name" id="m-nombre">—</div>
+      <div class="member-label" style="margin-top:10px">Puntos actuales</div>
+      <div class="member-pts" id="m-puntos">0</div>
+    </div>
+
+    <div class="btn-row" style="margin-bottom:12px;">
+      <button class="btn btn-gold" onclick="operarRapido(1)">+1 Visita</button>
+      <button class="btn btn-red"  onclick="operarRapido(-10)">−10 Canje</button>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="field" style="margin-bottom:8px;">
+      <label>Cantidad personalizada</label>
+      <input type="number" id="inp-puntos" min="1" max="9999" placeholder="Ej: 5">
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-gold" onclick="operarManual(1)">+ Sumar</button>
+      <button class="btn btn-outline" onclick="operarManual(-1)">− Restar</button>
+    </div>
+
+    <div class="spinner" id="sp-puntos">Actualizando...</div>
+    <div class="msg" id="msg-puntos"></div>
+    <span class="link-back" onclick="ir('s-home')">← Otro cliente</span>
+  </div>
+
+  <!-- OK -->
+  <div id="s-ok" class="screen">
+    <div style="text-align:center; padding:6px 0 14px">
+      <div style="font-size:46px; margin-bottom:8px">✅</div>
+      <h2>¡Listo!</h2>
+      <p class="subtitle" style="margin-top:6px">Wallet actualizado. El cliente recibirá notificación.</p>
+      <div class="member-card" style="margin:16px 0;">
+        <div class="member-label">Puntos totales ahora</div>
+        <div class="member-pts" id="pts-nuevos">0</div>
+      </div>
+    </div>
+    <button class="btn btn-dark" onclick="ir('s-home')">← Otro cliente</button>
+  </div>
+</div>
+
+<!-- MODAL SCANNER QR — solo se abre al presionar el botón -->
+<div class="qr-modal" id="qr-modal">
+  <div class="qr-box">
+    <h3>Escanear tarjeta</h3>
+    <div id="qr-wrap">
+      <video id="qr-video" autoplay muted playsinline></video>
+      <div class="qr-overlay"><div class="qr-frame"></div></div>
+    </div>
+    <p class="qr-hint" id="qr-hint">Apunta al código QR de la tarjeta</p>
+    <button class="btn btn-outline" onclick="cerrarScanner()" style="font-size:13px; padding:10px;">Cancelar</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
+<script>
+
+  /* ============================================ */
+  /* CONFIGURACIÓN                                */
+  /* Reemplaza con la URL de tu Apps Script       */
+  /* ============================================ */
+  var API_URL = 'https://script.google.com/macros/s/AKfycbxEXUR86-1fIHe38dJOp3HsJ5mZ0EkTuO8SLUPqlxALoUdC4FVpQ9k8C8lTK1KkBuP0MA/exec';
+
+  /* ============================================ */
+  /* ESTADO                                       */
+  /* ============================================ */
+  var sessionToken  = null;
+  var baristaName   = '';
+  var currentMember = null;
+  var scanning      = false;
+  var videoEl, canvasEl, canvasCtx;
+
+  /* ============================================ */
+  /* INIT                                         */
+  /* ============================================ */
+  window.onload = function() {
+    var tok  = sessionStorage.getItem('bk_token');
+    var exp  = sessionStorage.getItem('bk_exp');
+    var name = sessionStorage.getItem('bk_name');
+    if (tok && exp && Date.now() < parseInt(exp)) {
+      sessionToken = tok;
+      baristaName  = name || '';
+      setTag();
+      ir('s-home');
+    }
+  };
+
+  function setTag() {
+    document.getElementById('tag-home').textContent   = 'Sesión: ' + baristaName;
+    document.getElementById('tag-member').textContent = 'Sesión: ' + baristaName;
+  }
+
+  /* ============================================ */
+  /* JSONP                                        */
+  /* Codifica el payload en base64 y lo manda     */
+  /* como parámetro GET para evitar CORS          */
+  /* ============================================ */
+  var cbCount = 0;
+
+  function jsonp(action, data, callback) {
+    var cbName = '__apscb_' + (++cbCount);
+    var encoded = btoa(unescape(encodeURIComponent(JSON.stringify(data))));
+    var url = API_URL
+      + '?action=' + encodeURIComponent(action)
+      + '&data='   + encodeURIComponent(encoded)
+      + '&callback=' + cbName;
+
+    window[cbName] = function(res) {
+      delete window[cbName];
+      document.head.removeChild(script);
+      callback(res);
+    };
+
+    var script = document.createElement('script');
+    script.src = url;
+    script.onerror = function() {
+      delete window[cbName];
+      document.head.removeChild(script);
+      callback({ ok: false, error: 'Error de red' });
+    };
+    document.head.appendChild(script);
+  }
+
+  /* ============================================ */
+  /* LOGIN                                        */
+  /* ============================================ */
+  function hacerLogin() {
+    var usuario  = document.getElementById('inp-usuario').value.trim();
+    var password = document.getElementById('inp-password').value;
+    if (!usuario || !password) { mostrarErr('err-login', 'Completa usuario y contraseña'); return; }
+
+    spin('sp-login', true); ocultarMsg('err-login');
+
+    jsonp('login', { usuario: usuario, password: password }, function(res) {
+      spin('sp-login', false);
+      if (res.ok) {
+        sessionToken = res.token;
+        baristaName  = res.nombre;
+        var exp = Date.now() + (4 * 60 * 60 * 1000);
+        sessionStorage.setItem('bk_token', sessionToken);
+        sessionStorage.setItem('bk_exp',   exp.toString());
+        sessionStorage.setItem('bk_name',  baristaName);
+        setTag();
+        ir('s-home');
+      } else {
+        mostrarErr('err-login', res.error || 'Credenciales incorrectas');
+      }
+    });
+  }
+
+  /* ============================================ */
+  /* SCANNER QR — solo activo cuando se abre     */
+  /* ============================================ */
+  function abrirScanner() {
+    document.getElementById('qr-modal').classList.add('active');
+    document.getElementById('qr-hint').textContent = 'Apunta al código QR de la tarjeta';
+    videoEl   = document.getElementById('qr-video');
+    canvasEl  = document.createElement('canvas');
+    canvasCtx = canvasEl.getContext('2d');
+    scanning  = true;
+
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+      .then(function(stream) {
+        videoEl.srcObject = stream;
+        videoEl.play();
+        requestAnimationFrame(leerFrame);
+      })
+      .catch(function(err) {
+        document.getElementById('qr-hint').textContent = 'Sin acceso a cámara: ' + err.message;
+      });
+  }
+
+  function cerrarScanner() {
+    scanning = false;
+    if (videoEl && videoEl.srcObject) {
+      videoEl.srcObject.getTracks().forEach(function(t) { t.stop(); });
+    }
+    document.getElementById('qr-modal').classList.remove('active');
+  }
+
+  function leerFrame() {
+    if (!scanning) return;
+    if (videoEl.readyState === videoEl.HAVE_ENOUGH_DATA) {
+      canvasEl.width  = videoEl.videoWidth;
+      canvasEl.height = videoEl.videoHeight;
+      canvasCtx.drawImage(videoEl, 0, 0);
+      var img  = canvasCtx.getImageData(0, 0, canvasEl.width, canvasEl.height);
+      var code = jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
+      if (code) {
+        var mid = extraerMemberId(code.data);
+        if (mid) {
+          cerrarScanner();
+          buscarMiembro(mid);
+          return;
+        }
+      }
+    }
+    requestAnimationFrame(leerFrame);
+  }
+
+  function extraerMemberId(texto) {
+    if (!texto) return null;
+    var m = texto.match(/\/v\/([a-zA-Z0-9_-]+)/);
+    if (m) return m[1];
+    if (/^[a-zA-Z0-9_-]{8,}$/.test(texto.trim())) return texto.trim();
+    return null;
+  }
+
+  /* ============================================ */
+  /* BUSCAR MIEMBRO                               */
+  /* ============================================ */
+  function buscarMiembro(memberId) {
+    spin('sp-home', true); ocultarMsg('err-home');
+
+    jsonp('getMember', { memberId: memberId, token: sessionToken }, function(res) {
+      spin('sp-home', false);
+      if (res.ok) {
+        currentMember = res;
+        document.getElementById('m-nombre').textContent = res.nombre;
+        document.getElementById('m-puntos').textContent = res.puntos;
+        ocultarMsg('msg-puntos');
+        document.getElementById('inp-puntos').value = '';
+        ir('s-member');
+      } else {
+        if (sesionExpirada(res)) return;
+        mostrarErr('err-home', res.error || 'Tarjeta no encontrada');
+      }
+    });
+  }
+
+  /* ============================================ */
+  /* PUNTOS                                       */
+  /* ============================================ */
+  function operarRapido(delta) { enviarPuntos(delta); }
+
+  function operarManual(signo) {
+    var val = parseInt(document.getElementById('inp-puntos').value);
+    if (!val || val <= 0) { mostrarMsgTipo('msg-puntos', 'err', 'Ingresa una cantidad válida'); return; }
+    enviarPuntos(signo * val);
+  }
+
+  function enviarPuntos(delta) {
+    spin('sp-puntos', true); ocultarMsg('msg-puntos');
+
+    jsonp('actualizarPuntos', {
+      memberId: currentMember.id,
+      delta:    delta,
+      token:    sessionToken
+    }, function(res) {
+      spin('sp-puntos', false);
+      if (res.ok) {
+        document.getElementById('pts-nuevos').textContent = res.puntosNuevos;
+        ir('s-ok');
+      } else {
+        if (sesionExpirada(res)) return;
+        mostrarMsgTipo('msg-puntos', 'err', res.error || 'Error al actualizar');
+      }
+    });
+  }
+
+  /* ============================================ */
+  /* HELPERS                                      */
+  /* ============================================ */
+  function sesionExpirada(res) {
+    if (res.error && res.error.toLowerCase().includes('sesión')) {
+      sessionStorage.clear(); sessionToken = null; baristaName = '';
+      ir('s-login'); return true;
+    }
+    return false;
+  }
+
+  function ir(id) {
+    document.querySelectorAll('.screen').forEach(function(s) { s.classList.remove('active'); });
+    document.getElementById(id).classList.add('active');
+  }
+
+  function spin(id, show)    { document.getElementById(id).style.display = show ? 'block' : 'none'; }
+  function mostrarErr(id, m) { var e = document.getElementById(id); e.textContent = m; e.style.display = 'block'; }
+  function ocultarMsg(id)    { var e = document.getElementById(id); e.style.display = 'none'; e.textContent = ''; }
+  function mostrarMsgTipo(id, tipo, m) {
+    var e = document.getElementById(id);
+    e.className = 'msg ' + (tipo === 'ok' ? 'msg-ok' : 'msg-err');
+    e.textContent = m; e.style.display = 'block';
+  }
+
+</script>
+</body>
+</html>
