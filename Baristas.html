@@ -305,7 +305,8 @@
       canvasEl.height = videoEl.videoHeight;
       canvasCtx.drawImage(videoEl, 0, 0);
       var img  = canvasCtx.getImageData(0, 0, canvasEl.width, canvasEl.height);
-      var code = jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
+var code = jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
+      console.log('frame procesado, code:', code ? code.data : 'null');
       if (code) {
         var mid = extraerMemberId(code.data);
         if (mid) {
