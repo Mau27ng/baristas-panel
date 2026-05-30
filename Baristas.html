@@ -318,11 +318,14 @@
     requestAnimationFrame(leerFrame);
   }
 
-  function extraerMemberId(texto) {
+function extraerMemberId(texto) {
     if (!texto) return null;
+    texto = texto.trim();
+    // URL tipo https://pub1.pskt.io/v/MEMBERID
     var m = texto.match(/\/v\/([a-zA-Z0-9_-]+)/);
     if (m) return m[1];
-    if (/^[a-zA-Z0-9_-]{8,}$/.test(texto.trim())) return texto.trim();
+    // Solo el memberId directo (lo que devuelve PassKit)
+    if (/^[a-zA-Z0-9_+=\/]{8,}$/.test(texto)) return texto;
     return null;
   }
 
